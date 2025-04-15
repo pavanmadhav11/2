@@ -19,7 +19,7 @@ def index():
 
             # Initialize the flowchart generator
             fc = CodeToFlowchart()
-            flowchart_image_path = fc.generate(code)
+            flowchart_image_path = fc.generate_flowchart(code)
 
             if flowchart_image_path:
                 chart_url = f"/static/{flowchart_image_path}"
