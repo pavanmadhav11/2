@@ -3,10 +3,5 @@ services:
     name: flowchart-app
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    envVars:
-      - key: PORT
-        value: 5000
-    python:
-      version: "3.9"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
