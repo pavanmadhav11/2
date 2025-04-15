@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from convertor import FlowchartGenerator
+from converter import FlowchartGenerator
 import os
 import traceback
 
