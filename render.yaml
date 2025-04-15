@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: your-service-name
+    name: code-to-flowchart
     env: python
     buildCommand: |
       curl -sSL https://raw.githubusercontent.com/weibeld/heroku-buildpack-graphviz/master/bin/install-graphviz | sh
