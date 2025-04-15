@@ -1,2 +1,3 @@
 flask
-pyflowchart
+pyflowchart==0.2.0  # Specific stable version
+gunicorn
