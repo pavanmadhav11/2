@@ -1,27 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Python to Flowchart</title>
+    <title>Code to Flowchart</title>
+    <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.11.3/release/flowchart.min.js"></script>
     <style>
-        body { font-family: Arial; margin: 40px; }
-        textarea { width: 100%; height: 200px; }
-        img { margin-top: 20px; border: 1px solid #ccc; }
+        #flowchart-container {
+            width: 100%;
+            overflow: auto;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        #flowchart {
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
-    <h1>Python Code to Flowchart Generator</h1>
+    <h1>Python Code to Flowchart</h1>
     <form method="POST">
-        <textarea name="code" placeholder="Paste Python code here..."></textarea><br>
+        <textarea name="code" rows="10" cols="80" placeholder="Enter Python code here..."></textarea><br>
         <button type="submit">Generate Flowchart</button>
     </form>
 
-    {% if flowchart %}
-        <h2>Flowchart:</h2>
-        <img src="/static/flowchart.png" alt="Flowchart">
-    {% endif %}
-
     {% if error %}
         <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    {% if flowchart_data %}
+        <h3>Flowchart ({{ flowchart_data.nodes }} nodes)</h3>
+        <div id="flowchart-container">
+            <div id="flowchart"></div>
+        </div>
+        <script>
+            // Render the flowchart using flowchart.js
+            try {
+                var diagram = flowchart.parse(`{{ flowchart_data.flowchart_text }}`);
+                diagram.drawSVG('flowchart', {
+                    'x': 0,
+                    'y': 0,
+                    'line-width': 2,
+                    'line-length': 50,
+                    'font-size': 14,
+                    'font-color': 'black',
+                    'line-color': 'black',
+                    'element-color': 'black',
+                    'fill': 'white',
+                    'yes-text': 'yes',
+                    'no-text': 'no',
+                    'arrow-end': 'block',
+                    'scale': 1
+                });
+            } catch(e) {
+                document.getElementById('flowchart').innerHTML = 
+                    '<p style="color:red;">Error rendering flowchart: ' + e.message + '</p>';
+            }
+        </script>
     {% endif %}
 </body>
 </html>
