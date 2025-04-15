@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    chart_url = None
+    flowchart_data = None
     error = None
 
     if request.method == "POST":
@@ -15,27 +15,20 @@ def index():
             code = request.form.get("code", "")
             if not code.strip():
                 error = "Please enter some code!"
-                return render_template("index.html", chart_url=None, error=error)
+                return render_template("index.html", flowchart_data=None, error=error)
 
             converter = CodeToFlowchart()
-            flowchart = converter.generate_flowchart(code)
+            flowchart_data = converter.generate_flowchart(code)
 
-            if flowchart:
-                # Ensure static directory exists
-                os.makedirs("static", exist_ok=True)
-
-                filename = "static/flowchart"
-                flowchart.render(filename, format="png", cleanup=True)
-                chart_url = f"{filename}.png"
-            else:
+            if not flowchart_data:
                 error = "Syntax Error in your code. Please fix it."
 
         except Exception as e:
-            traceback.print_exc()  # Print full traceback to logs
+            traceback.print_exc()
             error = f"Something went wrong: {str(e)}"
 
-    return render_template("index.html", chart_url=chart_url, error=error)
+    return render_template("index.html", flowchart_data=flowchart_data, error=error)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Required for Render
+    port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
