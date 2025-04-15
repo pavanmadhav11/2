@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from converter import FlowchartGenerator
+from converter import CodeToFlowchart
 import os
 import traceback
 
