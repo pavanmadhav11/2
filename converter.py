@@ -1,48 +1,71 @@
 import ast
-from pyflowchart import Flowchart
+import graphviz
 
-class CodeToFlowchart:
+class CodeToFlowchart(ast.NodeVisitor):
     def __init__(self):
+        self.graph = graphviz.Digraph(format="png")
+        self.node_count = 0
+        self.prev_node = None
         self.error_detected = False
+
+    def add_node(self, label):
+        node_name = f"node{self.node_count}"
+        self.graph.node(node_name, label, shape="box")
+        if self.prev_node is not None:
+            self.graph.edge(self.prev_node, node_name)
+        self.prev_node = node_name
+        self.node_count += 1
+        return node_name
+
+    def visit_FunctionDef(self, node):
+        self.prev_node = self.add_node(f"Function: {node.name}")
+        self.generic_visit(node)
+
+    def visit_Assign(self, node):
+        targets = ", ".join([target.id for target in node.targets if isinstance(target, ast.Name)])
+        value = ast.unparse(node.value) if hasattr(ast, "unparse") else ""
+        self.add_node(f"{targets} = {value}")
+
+    def visit_If(self, node):
+        cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
+        if_node = self.add_node(f"IF {cond}?")
+        prev = self.prev_node
+        self.prev_node = if_node
+        for stmt in node.body:
+            self.visit(stmt)
+        true_end = self.prev_node
+        self.prev_node = if_node
+        for stmt in node.orelse:
+            self.visit(stmt)
+        false_end = self.prev_node
+        self.graph.edge(if_node, true_end, label="True")
+        self.graph.edge(if_node, false_end, label="False")
+        self.prev_node = false_end
+
+    def visit_While(self, node):
+        cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
+        loop_node = self.add_node(f"WHILE {cond}?")
+        prev = self.prev_node
+        self.prev_node = loop_node
+        for stmt in node.body:
+            self.visit(stmt)
+        self.graph.edge(self.prev_node, loop_node, label="Loop Back")
+        self.prev_node = loop_node
+
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call):
+            func_name = ast.unparse(node.value.func) if hasattr(ast, "unparse") else ""
+            self.add_node(f"Call: {func_name}()")
+
+    def visit_Return(self, node):
+        value = ast.unparse(node.value) if hasattr(ast, "unparse") else ""
+        self.add_node(f"Return {value}")
 
     def generate_flowchart(self, code):
         try:
-            # Add wrapper function if needed
-            wrapped_code = self._wrap_code_if_needed(code)
-            
-            # Generate the flowchart
-            fc = Flowchart.from_code(wrapped_code)
-            flowchart_text = fc.flowchart()
-            
-            # Clean and simplify the flowchart text
-            cleaned_text = self._clean_flowchart_text(flowchart_text)
-            
-            return {
-                'flowchart_text': cleaned_text,
-                'nodes': self._count_nodes(flowchart_text)
-            }
-        except Exception as e:
-            print(f"Error generating flowchart: {str(e)}")
+            tree = ast.parse(code)
+            self.visit(tree)
+            self.graph.render("static/flowchart", format="png", cleanup=True)
+            return True
+        except SyntaxError as e:
             return False
-
-    def _wrap_code_if_needed(self, code):
-        """Wrap simple statements in a function if needed."""
-        if not code.strip().startswith(('def ', 'class ', '@')):
-            # Indent all lines and add function wrapper
-            indented_code = '\n'.join(f'    {line}' if line.strip() else line 
-                                    for line in code.split('\n'))
-            return f"def wrapper():\n{indented_code}"
-        return code
-
-    def _clean_flowchart_text(self, text):
-        """Clean up the flowchart text for better display."""
-        text = text.replace('`', '\\`').replace('$', '\\$')
-        if "wrapper()" in text:
-            text = text.replace("st=>start: wrapper()", "st=>start: Start")
-            text = text.replace("e=>end: wrapper()", "e=>end: End")
-        return text
-
-    def _count_nodes(self, flowchart_text):
-        """Count the number of nodes in the flowchart."""
-        return len([line for line in flowchart_text.split('\n') 
-                  if line.strip() and '=>' in line])

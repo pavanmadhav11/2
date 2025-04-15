@@ -1,3 +1,2 @@
-flask
-pyflowchart
-gunicorn
+Flask
+graphviz
