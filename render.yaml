@@ -1,11 +1,7 @@
 services:
   - type: web
-    name: code-to-flowchart
+    name: flowchart-app
     env: python
-    buildCommand: |
-      curl -sSL https://raw.githubusercontent.com/weibeld/heroku-buildpack-graphviz/master/bin/install-graphviz | sh
-      pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    envVars:
-      - key: PATH
-        value: /app/.apt/usr/bin:$PATH
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port 80"
+    plan: free
