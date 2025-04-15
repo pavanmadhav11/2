@@ -1,24 +1,29 @@
-# app.py
 from flask import Flask, render_template, request, send_file
-from converter import FlowchartGenerator
+from convertor import FlowchartGenerator
 import os
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    flowchart_path = None
     if request.method == "POST":
         code = request.form["code"]
-        generator = FlowchartGenerator()
-        output_path = "static/flowchart.png"
-        generator.generate(code, output_path=output_path)
-        flowchart_path = output_path if os.path.exists(output_path) else None
-    return render_template("index.html", image=flowchart_path)
+        try:
+            generator = FlowchartGenerator()
+            generator.generate(code)
 
-@app.route("/download")
-def download():
-    return send_file("static/flowchart.png", as_attachment=True)
+            # Save plot to file
+            output_path = "static/flowchart.png"
+            generator.save(output_path)
+
+            return render_template("index.html", image="flowchart.png", code=code)
+        except Exception as e:
+            return render_template("index.html", error=str(e), code=code)
+    return render_template("index.html")
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_file(os.path.join("static", filename))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=80)
