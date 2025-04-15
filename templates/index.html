@@ -2,7 +2,8 @@
 <html>
 <head>
     <title>Code to Flowchart</title>
-    <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.11.3/release/flowchart.min.js"></script>
+    <!-- Load flowchart.js from reliable CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.15.0/flowchart.min.js"></script>
     <style>
         #flowchart-container {
             width: 100%;
@@ -13,6 +14,16 @@
         }
         #flowchart {
             margin: 0 auto;
+        }
+        .node rect {
+            stroke: #333;
+            fill: #fff;
+        }
+        .arrowheadPath {
+            fill: #333;
+        }
+        .flowchart-link {
+            stroke: #333;
         }
     </style>
 </head>
@@ -33,28 +44,34 @@
             <div id="flowchart"></div>
         </div>
         <script>
-            // Render the flowchart using flowchart.js
-            try {
-                var diagram = flowchart.parse(`{{ flowchart_data.flowchart_text }}`);
-                diagram.drawSVG('flowchart', {
-                    'x': 0,
-                    'y': 0,
-                    'line-width': 2,
-                    'line-length': 50,
-                    'font-size': 14,
-                    'font-color': 'black',
-                    'line-color': 'black',
-                    'element-color': 'black',
-                    'fill': 'white',
-                    'yes-text': 'yes',
-                    'no-text': 'no',
-                    'arrow-end': 'block',
-                    'scale': 1
-                });
-            } catch(e) {
-                document.getElementById('flowchart').innerHTML = 
-                    '<p style="color:red;">Error rendering flowchart: ' + e.message + '</p>';
-            }
+            document.addEventListener('DOMContentLoaded', function() {
+                try {
+                    // Clean any previous flowchart
+                    document.getElementById('flowchart').innerHTML = '';
+                    
+                    // Parse and render the flowchart
+                    var chart = flowchart.parse(`{{ flowchart_data.flowchart_text|safe }}`);
+                    chart.drawSVG('flowchart', {
+                        'x': 0,
+                        'y': 0,
+                        'line-width': 2,
+                        'line-length': 30,
+                        'font-size': 14,
+                        'font-color': 'black',
+                        'line-color': 'black',
+                        'element-color': 'black',
+                        'fill': 'white',
+                        'yes-text': 'yes',
+                        'no-text': 'no',
+                        'arrow-end': 'block',
+                        'scale': 1
+                    });
+                } catch(e) {
+                    console.error('Flowchart error:', e);
+                    document.getElementById('flowchart').innerHTML = 
+                        '<p style="color:red;">Error rendering flowchart. Please check your code syntax.</p>';
+                }
+            });
         </script>
     {% endif %}
 </body>
