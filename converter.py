@@ -1,48 +1,75 @@
+# convertor.py
 import ast
-from pyflowchart import Flowchart
+import networkx as nx
+import matplotlib.pyplot as plt
 
-class CodeToFlowchart:
+class FlowchartGenerator(ast.NodeVisitor):
     def __init__(self):
-        self.error_detected = False
+        self.graph = nx.DiGraph()
+        self.counter = 0
+        self.last_node = None
 
-    def generate_flowchart(self, code):
-        try:
-            # Add wrapper function if needed
-            wrapped_code = self._wrap_code_if_needed(code)
-            
-            # Generate the flowchart
-            fc = Flowchart.from_code(wrapped_code)
-            flowchart_text = fc.flowchart()
-            
-            # Clean and simplify the flowchart text
-            cleaned_text = self._clean_flowchart_text(flowchart_text)
-            
-            return {
-                'flowchart_text': cleaned_text,
-                'nodes': self._count_nodes(flowchart_text)
-            }
-        except Exception as e:
-            print(f"Error generating flowchart: {str(e)}")
-            return False
+    def _new_node(self, label):
+        node_id = f"n{self.counter}"
+        self.graph.add_node(node_id, label=label)
+        if self.last_node is not None:
+            self.graph.add_edge(self.last_node, node_id)
+        self.last_node = node_id
+        self.counter += 1
+        return node_id
 
-    def _wrap_code_if_needed(self, code):
-        """Wrap simple statements in a function if needed."""
-        if not code.strip().startswith(('def ', 'class ', '@')):
-            # Indent all lines and add function wrapper
-            indented_code = '\n'.join(f'    {line}' if line.strip() else line 
-                                    for line in code.split('\n'))
-            return f"def wrapper():\n{indented_code}"
-        return code
+    def visit_FunctionDef(self, node):
+        self.last_node = self._new_node(f"Function: {node.name}")
+        self.generic_visit(node)
 
-    def _clean_flowchart_text(self, text):
-        """Clean up the flowchart text for better display."""
-        text = text.replace('`', '\\`').replace('$', '\\$')
-        if "wrapper()" in text:
-            text = text.replace("st=>start: wrapper()", "st=>start: Start")
-            text = text.replace("e=>end: wrapper()", "e=>end: End")
-        return text
+    def visit_Assign(self, node):
+        targets = ", ".join(ast.unparse(t) for t in node.targets)
+        value = ast.unparse(node.value)
+        self._new_node(f"{targets} = {value}")
 
-    def _count_nodes(self, flowchart_text):
-        """Count the number of nodes in the flowchart."""
-        return len([line for line in flowchart_text.split('\n') 
-                  if line.strip() and '=>' in line])
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call):
+            call_expr = ast.unparse(node.value)
+            self._new_node(f"Call: {call_expr}")
+
+    def visit_If(self, node):
+        cond = ast.unparse(node.test)
+        if_node = self._new_node(f"If {cond}?")
+        prev = self.last_node
+        for stmt in node.body:
+            self.visit(stmt)
+        self.graph.add_edge(if_node, self.last_node, label="True")
+        self.last_node = if_node
+        for stmt in node.orelse:
+            self.visit(stmt)
+        self.graph.add_edge(if_node, self.last_node, label="False")
+
+    def visit_While(self, node):
+        cond = ast.unparse(node.test)
+        loop_node = self._new_node(f"While {cond}?")
+        for stmt in node.body:
+            self.visit(stmt)
+        self.graph.add_edge(self.last_node, loop_node, label="Loop")
+        self.last_node = loop_node
+
+    def visit_Return(self, node):
+        val = ast.unparse(node.value) if node.value else ""
+        self._new_node(f"Return {val}")
+
+    def generate(self, code, output_path="static/flowchart.png"):
+        tree = ast.parse(code)
+        self.visit(tree)
+
+        labels = nx.get_node_attributes(self.graph, 'label')
+        pos = nx.spring_layout(self.graph)
+        nx.draw(self.graph, pos, labels=labels, with_labels=True,
+                node_size=3000, node_color="skyblue", font_size=8,
+                font_weight='bold')
+        edge_labels = nx.get_edge_attributes(self.graph, 'label')
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
+
+        plt.title("Flowchart")
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.clf()
+        return output_path
