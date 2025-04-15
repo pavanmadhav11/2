@@ -6,11 +6,15 @@ services:
     env: python
     build:
       commands:
-        # Update package list and install Graphviz with additional dependencies
+        # Update package list and install Graphviz along with required dependencies
         - apt-get update
         - apt-get install -y graphviz
         - apt-get install -y pkg-config
         - apt-get install -y libgraphviz-dev
+        # Check and print Graphviz installation details
+        - echo "Checking Graphviz installation..."
+        - which dot
+        - dot -V  # Check if dot command is available and show its version
     start:
       command: python app.py
     env_vars:
