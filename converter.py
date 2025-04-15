@@ -1,90 +1,92 @@
 import ast
-import networkx as nx
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageFont
 
-class FlowchartGenerator(ast.NodeVisitor):
-    def __init__(self):
-        self.graph = nx.DiGraph()
-        self.counter = 0
-        self.last_node = None
+class FlowchartGenerator:
+    def __init__(self, image_size=(800, 600), font_size=14):
+        self.image = Image.new("RGB", image_size, color="white")
+        self.draw = ImageDraw.Draw(self.image)
+        self.font = ImageFont.load_default()  # Use a default font
+        self.x_offset = 50
+        self.y_offset = 50
+        self.node_width = 150
+        self.node_height = 50
+        self.spacing = 20
 
-    def _new_node(self, label, node_type="box"):
-        node_id = f"n{self.counter}"
-        self.graph.add_node(node_id, label=label, node_type=node_type)
-        if self.last_node is not None:
-            self.graph.add_edge(self.last_node, node_id)
-        self.last_node = node_id
-        self.counter += 1
-        return node_id
+    def _draw_node(self, text, x, y):
+        # Draw the rectangle for the node
+        self.draw.rectangle([x, y, x + self.node_width, y + self.node_height], outline="black", width=2)
+        # Add the text inside the node
+        self.draw.text((x + 10, y + 10), text, fill="black", font=self.font)
+
+    def _add_edge(self, start, end):
+        # Draw an arrow from start to end (simple line for simplicity)
+        self.draw.line([start[0] + self.node_width // 2, start[1] + self.node_height, end[0] + self.node_width // 2, end[1]], fill="black", width=2)
+        self.draw.polygon([end[0] + self.node_width // 2 - 5, end[1], end[0] + self.node_width // 2 + 5, end[1], end[0] + self.node_width // 2, end[1] + 10], fill="black")
 
     def visit_FunctionDef(self, node):
-        self.last_node = self._new_node(f"Function: {node.name}", node_type="ellipse")
+        text = f"Function: {node.name}"
+        x = self.x_offset
+        y = self.y_offset
+        self._draw_node(text, x, y)
+        self.y_offset += self.node_height + self.spacing
         self.generic_visit(node)
 
     def visit_Assign(self, node):
         targets = ", ".join(ast.unparse(t) for t in node.targets)
         value = ast.unparse(node.value)
-        self._new_node(f"{targets} = {value}", node_type="box")
-
-    def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            call_expr = ast.unparse(node.value)
-            self._new_node(f"Call: {call_expr}", node_type="box")
+        text = f"{targets} = {value}"
+        x = self.x_offset
+        y = self.y_offset
+        self._draw_node(text, x, y)
+        self.y_offset += self.node_height + self.spacing
 
     def visit_If(self, node):
         cond = ast.unparse(node.test)
-        if_node = self._new_node(f"If {cond}?", node_type="diamond")
-        prev = self.last_node
+        text = f"If {cond}?"
+        x = self.x_offset
+        y = self.y_offset
+        self._draw_node(text, x, y)
+        start = (x, y)
+
+        self.y_offset += self.node_height + self.spacing
         for stmt in node.body:
             self.visit(stmt)
-        self.graph.add_edge(if_node, self.last_node, label="True")
-        self.last_node = if_node
+
+        end = (x, self.y_offset)
+        self._add_edge(start, end)
+
+        self.y_offset += self.node_height + self.spacing
         for stmt in node.orelse:
             self.visit(stmt)
-        self.graph.add_edge(if_node, self.last_node, label="False")
+
+        self._add_edge(start, (x, self.y_offset))
 
     def visit_While(self, node):
         cond = ast.unparse(node.test)
-        loop_node = self._new_node(f"While {cond}?", node_type="diamond")
-        prev = self.last_node
+        text = f"While {cond}?"
+        x = self.x_offset
+        y = self.y_offset
+        self._draw_node(text, x, y)
+        start = (x, y)
+
+        self.y_offset += self.node_height + self.spacing
         for stmt in node.body:
             self.visit(stmt)
-        self.graph.add_edge(self.last_node, loop_node, label="Loop")
-        self.last_node = loop_node
+
+        self._add_edge((x, self.y_offset), start)
 
     def visit_Return(self, node):
-        val = ast.unparse(node.value) if node.value else ""
-        self._new_node(f"Return {val}", node_type="box")
+        value = ast.unparse(node.value) if node.value else ""
+        text = f"Return {value}"
+        x = self.x_offset
+        y = self.y_offset
+        self._draw_node(text, x, y)
+        self.y_offset += self.node_height + self.spacing
 
     def generate(self, code):
         tree = ast.parse(code)
         self.visit(tree)
 
-    def save(self, filepath="static/flowchart.png"):
-        labels = nx.get_node_attributes(self.graph, 'label')
-        node_types = nx.get_node_attributes(self.graph, 'node_type')
+    def save(self, filepath="flowchart.png"):
+        self.image.save(filepath)
 
-        # Using spring layout with a seed for better stability of the layout
-        pos = nx.spring_layout(self.graph, seed=42, k=0.6, iterations=30)
-
-        # Draw nodes with different shapes depending on node type
-        for node, node_type in node_types.items():
-            shape = "s" if node_type == "box" else "o" if node_type == "ellipse" else "^"
-            nx.draw_networkx_nodes(self.graph, pos, [node], node_size=3000, node_color="skyblue", node_shape=shape)
-        
-        # Draw edges with specific attributes
-        nx.draw_networkx_edges(self.graph, pos, width=2, alpha=0.6, edge_color="gray")
-
-        # Draw labels for nodes and edges
-        nx.draw_networkx_labels(self.graph, pos, labels, font_size=10, font_weight='bold', font_color="black")
-        edge_labels = nx.get_edge_attributes(self.graph, 'label')
-        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels, font_size=8, font_color="black")
-
-        # Set the title and remove axis
-        plt.title("Flowchart Representation of Python Code", fontsize=14)
-        plt.axis("off")
-
-        # Save the figure as a PNG file
-        plt.tight_layout()
-        plt.savefig(filepath)
-        plt.clf()
