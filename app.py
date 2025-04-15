@@ -1,29 +1,34 @@
-from flask import Flask, render_template, request, send_file
-from converter import FlowchartGenerator
+from flask import Flask, render_template, request
+from converter import CodeToFlowchart
 import os
+import traceback
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    flowchart_data = None
+    error = None
+
     if request.method == "POST":
-        code = request.form["code"]
         try:
-            generator = FlowchartGenerator()
-            generator.generate(code)
+            code = request.form.get("code", "").strip()
+            if not code:
+                error = "Please enter some code!"
+                return render_template("index.html", flowchart_data=None, error=error)
 
-            # Save flowchart
-            output_path = "static/flowchart.png"
-            generator.save(output_path)
+            converter = CodeToFlowchart()
+            flowchart_data = converter.generate_flowchart(code)
 
-            return render_template("index.html", image="flowchart.png", code=code)
+            if not flowchart_data:
+                error = "Syntax Error in your code. Please fix it."
+
         except Exception as e:
-            return render_template("index.html", error=str(e), code=code)
-    return render_template("index.html")
+            traceback.print_exc()
+            error = f"Something went wrong: {str(e)}"
 
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_file(os.path.join("static", filename))
+    return render_template("index.html", flowchart_data=flowchart_data, error=error)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
