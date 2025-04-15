@@ -1,4 +1,3 @@
-# convertor.py
 import ast
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -47,6 +46,7 @@ class FlowchartGenerator(ast.NodeVisitor):
     def visit_While(self, node):
         cond = ast.unparse(node.test)
         loop_node = self._new_node(f"While {cond}?")
+        prev = self.last_node
         for stmt in node.body:
             self.visit(stmt)
         self.graph.add_edge(self.last_node, loop_node, label="Loop")
@@ -56,10 +56,11 @@ class FlowchartGenerator(ast.NodeVisitor):
         val = ast.unparse(node.value) if node.value else ""
         self._new_node(f"Return {val}")
 
-    def generate(self, code, output_path="static/flowchart.png"):
+    def generate(self, code):
         tree = ast.parse(code)
         self.visit(tree)
 
+    def save(self, filepath="static/flowchart.png"):
         labels = nx.get_node_attributes(self.graph, 'label')
         pos = nx.spring_layout(self.graph)
         nx.draw(self.graph, pos, labels=labels, with_labels=True,
@@ -67,9 +68,7 @@ class FlowchartGenerator(ast.NodeVisitor):
                 font_weight='bold')
         edge_labels = nx.get_edge_attributes(self.graph, 'label')
         nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
-
         plt.title("Flowchart")
         plt.tight_layout()
-        plt.savefig(output_path)
+        plt.savefig(filepath)
         plt.clf()
-        return output_path
