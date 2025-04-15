@@ -1,23 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Code to Flowchart</title>
-    <!-- Load flowchart.js from reliable CDN -->
+    <title>Python Code to Flowchart</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.15.0/flowchart.min.js"></script>
     <style>
-        #flowchart-container {
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
             width: 100%;
-            overflow: auto;
-            margin-top: 20px;
-            border: 1px solid #ddd;
+            height: 200px;
+            font-family: monospace;
             padding: 10px;
         }
-        #flowchart {
-            margin: 0 auto;
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #flowchart-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            background: #f9f9f9;
+            overflow: auto;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
         }
         .node rect {
             stroke: #333;
             fill: #fff;
+            rx: 5;
+            ry: 5;
         }
         .arrowheadPath {
             fill: #333;
@@ -28,39 +53,39 @@
     </style>
 </head>
 <body>
-    <h1>Python Code to Flowchart</h1>
+    <h1>Python Code to Flowchart Converter</h1>
     <form method="POST">
-        <textarea name="code" rows="10" cols="80" placeholder="Enter Python code here..."></textarea><br>
+        <textarea name="code" placeholder="Enter Python code here...">{% if flowchart_data and request.method == "POST" %}{{ request.form.get('code', '') }}{% endif %}</textarea><br>
         <button type="submit">Generate Flowchart</button>
     </form>
 
     {% if error %}
-        <p style="color: red;">{{ error }}</p>
+        <p class="error">{{ error }}</p>
     {% endif %}
 
     {% if flowchart_data %}
-        <h3>Flowchart ({{ flowchart_data.nodes }} nodes)</h3>
         <div id="flowchart-container">
+            <h3>Flowchart ({{ flowchart_data.nodes }} nodes)</h3>
             <div id="flowchart"></div>
         </div>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 try {
-                    // Clean any previous flowchart
-                    document.getElementById('flowchart').innerHTML = '';
+                    var flowchartText = `{{ flowchart_data.flowchart_text|safe }}`;
+                    var container = document.getElementById('flowchart');
+                    container.innerHTML = '';
                     
-                    // Parse and render the flowchart
-                    var chart = flowchart.parse(`{{ flowchart_data.flowchart_text|safe }}`);
-                    chart.drawSVG('flowchart', {
+                    var chart = flowchart.parse(flowchartText);
+                    chart.drawSVG(container, {
                         'x': 0,
                         'y': 0,
                         'line-width': 2,
                         'line-length': 30,
                         'font-size': 14,
                         'font-color': 'black',
-                        'line-color': 'black',
+                        'line-color': '#555',
                         'element-color': 'black',
-                        'fill': 'white',
+                        'fill': '#f5f5f5',
                         'yes-text': 'yes',
                         'no-text': 'no',
                         'arrow-end': 'block',
@@ -68,8 +93,19 @@
                     });
                 } catch(e) {
                     console.error('Flowchart error:', e);
-                    document.getElementById('flowchart').innerHTML = 
-                        '<p style="color:red;">Error rendering flowchart. Please check your code syntax.</p>';
+                    var container = document.getElementById('flowchart');
+                    container.innerHTML = '<p>Simple code visualization:</p>';
+                    
+                    // Fallback simple visualization
+                    var simpleViz = document.createElement('div');
+                    simpleViz.style.border = '1px solid #ccc';
+                    simpleViz.style.padding = '10px';
+                    simpleViz.style.margin = '10px 0';
+                    simpleViz.style.backgroundColor = '#f5f5f5';
+                    
+                    var codeLines = `{{ request.form.get('code', '') }}`.split('\n');
+                    simpleViz.innerHTML = 'Start → ' + codeLines.join(' → ') + ' → End';
+                    container.appendChild(simpleViz);
                 }
             });
         </script>
