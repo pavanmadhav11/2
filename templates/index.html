@@ -1,114 +1,20 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Python Code to Flowchart</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.15.0/flowchart.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            font-family: monospace;
-            padding: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #flowchart-container {
-            margin-top: 20px;
-            border: 1px solid #ddd;
-            padding: 20px;
-            background: #f9f9f9;
-            overflow: auto;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-        .node rect {
-            stroke: #333;
-            fill: #fff;
-            rx: 5;
-            ry: 5;
-        }
-        .arrowheadPath {
-            fill: #333;
-        }
-        .flowchart-link {
-            stroke: #333;
-        }
-    </style>
+  <title>Python Code to Flowchart</title>
 </head>
 <body>
-    <h1>Python Code to Flowchart Converter</h1>
-    <form method="POST">
-        <textarea name="code" placeholder="Enter Python code here...">{% if flowchart_data and request.method == "POST" %}{{ request.form.get('code', '') }}{% endif %}</textarea><br>
-        <button type="submit">Generate Flowchart</button>
-    </form>
+  <h2>Paste your Python code below:</h2>
+  <form method="POST">
+    <textarea name="code" rows="15" cols="80" required></textarea><br><br>
+    <button type="submit">Generate Flowchart</button>
+  </form>
 
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
-
-    {% if flowchart_data %}
-        <div id="flowchart-container">
-            <h3>Flowchart ({{ flowchart_data.nodes }} nodes)</h3>
-            <div id="flowchart"></div>
-        </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                try {
-                    var flowchartText = `{{ flowchart_data.flowchart_text|safe }}`;
-                    var container = document.getElementById('flowchart');
-                    container.innerHTML = '';
-                    
-                    var chart = flowchart.parse(flowchartText);
-                    chart.drawSVG(container, {
-                        'x': 0,
-                        'y': 0,
-                        'line-width': 2,
-                        'line-length': 30,
-                        'font-size': 14,
-                        'font-color': 'black',
-                        'line-color': '#555',
-                        'element-color': 'black',
-                        'fill': '#f5f5f5',
-                        'yes-text': 'yes',
-                        'no-text': 'no',
-                        'arrow-end': 'block',
-                        'scale': 1
-                    });
-                } catch(e) {
-                    console.error('Flowchart error:', e);
-                    var container = document.getElementById('flowchart');
-                    container.innerHTML = '<p>Simple code visualization:</p>';
-                    
-                    // Fallback simple visualization
-                    var simpleViz = document.createElement('div');
-                    simpleViz.style.border = '1px solid #ccc';
-                    simpleViz.style.padding = '10px';
-                    simpleViz.style.margin = '10px 0';
-                    simpleViz.style.backgroundColor = '#f5f5f5';
-                    
-                    var codeLines = `{{ request.form.get('code', '') }}`.split('\n');
-                    simpleViz.innerHTML = 'Start → ' + codeLines.join(' → ') + ' → End';
-                    container.appendChild(simpleViz);
-                }
-            });
-        </script>
-    {% endif %}
+  {% if image %}
+    <h3>Generated Flowchart:</h3>
+    <img src="{{ image }}" alt="Flowchart" width="600">
+    <br><a href="/download">Download PNG</a>
+  {% endif %}
 </body>
 </html>
