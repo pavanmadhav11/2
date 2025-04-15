@@ -1,23 +1,11 @@
-# render.yaml
-
 services:
   - type: web
-    name: flowchart-app
+    name: your-service-name
     env: python
-    build:
-      commands:
-        # Update package list and install Graphviz along with required dependencies
-        - apt-get update
-        - apt-get install -y graphviz
-        - apt-get install -y pkg-config
-        - apt-get install -y libgraphviz-dev
-        # Check and print Graphviz installation details
-        - echo "Checking Graphviz installation..."
-        - which dot
-        - dot -V  # Check if dot command is available and show its version
-    start:
-      command: python app.py
-    env_vars:
-      - key: FLASK_ENV
-        value: production
-    plan: free
+    buildCommand: |
+      curl -sSL https://raw.githubusercontent.com/weibeld/heroku-buildpack-graphviz/master/bin/install-graphviz | sh
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PATH
+        value: /app/.apt/usr/bin:$PATH
