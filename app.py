@@ -12,7 +12,7 @@ def index():
             generator = FlowchartGenerator()
             generator.generate(code)
 
-            # Save plot to file
+            # Save flowchart
             output_path = "static/flowchart.png"
             generator.save(output_path)
 
