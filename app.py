@@ -18,7 +18,7 @@ def index():
                 return render_template("index.html", chart_url=None, error=error)
 
             # Initialize the flowchart generator
-            fc = FlowchartGenerator()
+            fc = CodeToFlowchart()
             flowchart_image_path = fc.generate(code)
 
             if flowchart_image_path:
