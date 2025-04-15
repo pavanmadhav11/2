@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask, render_template, request, send_file
-from convertor import FlowchartGenerator
+from converter import FlowchartGenerator
 import os
 
 app = Flask(__name__)
