@@ -12,8 +12,8 @@ def index():
 
     if request.method == "POST":
         try:
-            code = request.form.get("code", "")
-            if not code.strip():
+            code = request.form.get("code", "").strip()
+            if not code:
                 error = "Please enter some code!"
                 return render_template("index.html", flowchart_data=None, error=error)
 
