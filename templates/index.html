@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Python to Flowchart</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        textarea { width: 100%; height: 200px; }
+        img { margin-top: 20px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Python Code to Flowchart Generator</h1>
+    <form method="POST">
+        <textarea name="code" placeholder="Paste Python code here..."></textarea><br>
+        <button type="submit">Generate Flowchart</button>
+    </form>
+
+    {% if flowchart %}
+        <h2>Flowchart:</h2>
+        <img src="/static/flowchart.png" alt="Flowchart">
+    {% endif %}
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>
