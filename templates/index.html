@@ -1,20 +1,20 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Python Code to Flowchart</title>
+    <title>Python to Flowchart</title>
 </head>
 <body>
-  <h2>Paste your Python code below:</h2>
-  <form method="POST">
-    <textarea name="code" rows="15" cols="80" required></textarea><br><br>
-    <button type="submit">Generate Flowchart</button>
-  </form>
-
-  {% if image %}
-    <h3>Generated Flowchart:</h3>
-    <img src="{{ image }}" alt="Flowchart" width="600">
-    <br><a href="/download">Download PNG</a>
-  {% endif %}
+    <h1>Paste Your Python Code</h1>
+    <form method="post">
+        <textarea name="code" rows="20" cols="80">{{ code or '' }}</textarea><br><br>
+        <button type="submit">Generate Flowchart</button>
+    </form>
+    {% if image %}
+        <h2>Generated Flowchart:</h2>
+        <img src="{{ url_for('static_files', filename=image) }}" alt="Flowchart">
+    {% endif %}
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
 </body>
 </html>
