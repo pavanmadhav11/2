@@ -2,8 +2,13 @@ from flask import Flask, render_template, request
 from converter import CodeToFlowchart
 import os
 import traceback
+import graphviz
 
 app = Flask(__name__)
+
+# Configure Graphviz paths for Render.com
+os.environ["PATH"] += os.pathsep + '/app/.apt/usr/bin/'
+graphviz.set_binary('/app/.apt/usr/bin/dot')
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -37,5 +42,5 @@ def index():
     return render_template("index.html", chart_url=chart_url, error=error)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Required for Render
-    app.run(debug=False, host="0.0.0.0", port=port) 
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
