@@ -1,92 +1,84 @@
 import ast
-from PIL import Image, ImageDraw, ImageFont
+import matplotlib.pyplot as plt
+from PIL import Image
+import networkx as nx
 
-class FlowchartGenerator:
-    def __init__(self, image_size=(800, 600), font_size=14):
-        self.image = Image.new("RGB", image_size, color="white")
-        self.draw = ImageDraw.Draw(self.image)
-        self.font = ImageFont.load_default()  # Use a default font
-        self.x_offset = 50
-        self.y_offset = 50
-        self.node_width = 150
-        self.node_height = 50
-        self.spacing = 20
+class FlowchartGenerator(ast.NodeVisitor):
+    def __init__(self):
+        self.graph = nx.DiGraph()
+        self.counter = 0
+        self.last_node = None
 
-    def _draw_node(self, text, x, y):
-        # Draw the rectangle for the node
-        self.draw.rectangle([x, y, x + self.node_width, y + self.node_height], outline="black", width=2)
-        # Add the text inside the node
-        self.draw.text((x + 10, y + 10), text, fill="black", font=self.font)
-
-    def _add_edge(self, start, end):
-        # Draw an arrow from start to end (simple line for simplicity)
-        self.draw.line([start[0] + self.node_width // 2, start[1] + self.node_height, end[0] + self.node_width // 2, end[1]], fill="black", width=2)
-        self.draw.polygon([end[0] + self.node_width // 2 - 5, end[1], end[0] + self.node_width // 2 + 5, end[1], end[0] + self.node_width // 2, end[1] + 10], fill="black")
+    def _new_node(self, label):
+        node_id = f"n{self.counter}"
+        self.graph.add_node(node_id, label=label)
+        if self.last_node is not None:
+            self.graph.add_edge(self.last_node, node_id)
+        self.last_node = node_id
+        self.counter += 1
+        return node_id
 
     def visit_FunctionDef(self, node):
-        text = f"Function: {node.name}"
-        x = self.x_offset
-        y = self.y_offset
-        self._draw_node(text, x, y)
-        self.y_offset += self.node_height + self.spacing
+        self.last_node = self._new_node(f"Function: {node.name}")
         self.generic_visit(node)
 
     def visit_Assign(self, node):
         targets = ", ".join(ast.unparse(t) for t in node.targets)
         value = ast.unparse(node.value)
-        text = f"{targets} = {value}"
-        x = self.x_offset
-        y = self.y_offset
-        self._draw_node(text, x, y)
-        self.y_offset += self.node_height + self.spacing
+        self._new_node(f"{targets} = {value}")
+
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call):
+            call_expr = ast.unparse(node.value)
+            self._new_node(f"Call: {call_expr}")
 
     def visit_If(self, node):
         cond = ast.unparse(node.test)
-        text = f"If {cond}?"
-        x = self.x_offset
-        y = self.y_offset
-        self._draw_node(text, x, y)
-        start = (x, y)
-
-        self.y_offset += self.node_height + self.spacing
+        if_node = self._new_node(f"If {cond}?")
+        prev = self.last_node
         for stmt in node.body:
             self.visit(stmt)
-
-        end = (x, self.y_offset)
-        self._add_edge(start, end)
-
-        self.y_offset += self.node_height + self.spacing
+        self.graph.add_edge(if_node, self.last_node, label="True")
+        self.last_node = if_node
         for stmt in node.orelse:
             self.visit(stmt)
-
-        self._add_edge(start, (x, self.y_offset))
+        self.graph.add_edge(if_node, self.last_node, label="False")
 
     def visit_While(self, node):
         cond = ast.unparse(node.test)
-        text = f"While {cond}?"
-        x = self.x_offset
-        y = self.y_offset
-        self._draw_node(text, x, y)
-        start = (x, y)
-
-        self.y_offset += self.node_height + self.spacing
+        loop_node = self._new_node(f"While {cond}?")
+        prev = self.last_node
         for stmt in node.body:
             self.visit(stmt)
-
-        self._add_edge((x, self.y_offset), start)
+        self.graph.add_edge(self.last_node, loop_node, label="Loop")
+        self.last_node = loop_node
 
     def visit_Return(self, node):
-        value = ast.unparse(node.value) if node.value else ""
-        text = f"Return {value}"
-        x = self.x_offset
-        y = self.y_offset
-        self._draw_node(text, x, y)
-        self.y_offset += self.node_height + self.spacing
+        val = ast.unparse(node.value) if node.value else ""
+        self._new_node(f"Return {val}")
 
     def generate(self, code):
+        # Parse the code and visit each node using ast.NodeVisitor
         tree = ast.parse(code)
         self.visit(tree)
 
-    def save(self, filepath="flowchart.png"):
-        self.image.save(filepath)
+        # Create the flowchart visualization
+        labels = nx.get_node_attributes(self.graph, 'label')
+        pos = nx.spring_layout(self.graph)
+        nx.draw(self.graph, pos, labels=labels, with_labels=True,
+                node_size=3000, node_color="skyblue", font_size=8,
+                font_weight='bold')
+        edge_labels = nx.get_edge_attributes(self.graph, 'label')
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
+        plt.title("Flowchart")
+        plt.tight_layout()
+
+        # Save the flowchart to a PNG file
+        plt.savefig("flowchart.png")
+        plt.close()
+
+    def save(self, filename):
+        # Save the flowchart to a file
+        img = Image.open("flowchart.png")
+        img.save(filename)
 
