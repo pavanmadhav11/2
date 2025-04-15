@@ -1,4 +1,3 @@
-Flask
-matplotlib
-Pillow
-networkx
+flask
+pyflowchart
+gunicorn
