@@ -1,7 +1,16 @@
+# render.yaml
+
 services:
   - type: web
     name: flowchart-app
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn app:app --host 0.0.0.0 --port 80"
+    build:
+      commands:
+        # Update and install Graphviz
+        - apt-get update && apt-get install -y graphviz
+    start:
+      command: python app.py
+    env_vars:
+      - key: FLASK_ENV
+        value: production
     plan: free
