@@ -1,23 +1,24 @@
 import ast
-from bokeh.plotting import figure, output_file, save
-from bokeh.models import ColumnDataSource, LabelSet
+import graphviz
 
 class CodeToFlowchart(ast.NodeVisitor):
     def __init__(self):
+        self.graph = graphviz.Digraph(format="png")
         self.node_count = 0
-        self.nodes = []
-        self.edges = []
+        self.prev_node = None
+        self.error_detected = False
 
     def add_node(self, label):
         node_name = f"node{self.node_count}"
-        self.nodes.append({'id': node_name, 'label': label, 'x': 0, 'y': self.node_count * -100})
-        if self.node_count > 0:
-            self.edges.append((f"node{self.node_count - 1}", node_name))  # Connect to previous node
+        self.graph.node(node_name, label, shape="box")
+        if self.prev_node is not None:
+            self.graph.edge(self.prev_node, node_name)
+        self.prev_node = node_name
         self.node_count += 1
         return node_name
 
     def visit_FunctionDef(self, node):
-        self.add_node(f"Function: {node.name}")
+        self.prev_node = self.add_node(f"Function: {node.name}")
         self.generic_visit(node)
 
     def visit_Assign(self, node):
@@ -28,12 +29,28 @@ class CodeToFlowchart(ast.NodeVisitor):
     def visit_If(self, node):
         cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
         if_node = self.add_node(f"IF {cond}?")
-        self.generic_visit(node)
+        prev = self.prev_node
+        self.prev_node = if_node
+        for stmt in node.body:
+            self.visit(stmt)
+        true_end = self.prev_node
+        self.prev_node = if_node
+        for stmt in node.orelse:
+            self.visit(stmt)
+        false_end = self.prev_node
+        self.graph.edge(if_node, true_end, label="True")
+        self.graph.edge(if_node, false_end, label="False")
+        self.prev_node = false_end
 
     def visit_While(self, node):
         cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
         loop_node = self.add_node(f"WHILE {cond}?")
-        self.generic_visit(node)
+        prev = self.prev_node
+        self.prev_node = loop_node
+        for stmt in node.body:
+            self.visit(stmt)
+        self.graph.edge(self.prev_node, loop_node, label="Loop Back")
+        self.prev_node = loop_node
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
@@ -48,31 +65,7 @@ class CodeToFlowchart(ast.NodeVisitor):
         try:
             tree = ast.parse(code)
             self.visit(tree)
-
-            # Prepare Bokeh plot
-            p = figure(title="Code Flowchart", tools="", x_range=(-1, 2), y_range=(-self.node_count, 1))
-            p.xgrid.visible = False
-            p.ygrid.visible = False
-
-            # Plot nodes as text
-            source = ColumnDataSource(data=dict(
-                x=[node['x'] for node in self.nodes],
-                y=[node['y'] for node in self.nodes],
-                label=[node['label'] for node in self.nodes]
-            ))
-            labels = LabelSet(x='x', y='y', text='label', source=source, text_align='center')
-            p.add_layout(labels)
-
-            # Plot edges (connections between nodes)
-            for edge in self.edges:
-                p.line([self.nodes[int(edge[0][4:])]['x'], self.nodes[int(edge[1][4:])]['x']],
-                       [self.nodes[int(edge[0][4:])]['y'], self.nodes[int(edge[1][4:])]['y']],
-                       line_width=2, color="gray")
-
-            # Save output to HTML file
-            output_file("static/flowchart.html")
-            save(p)
-
-            return "flowchart.html"
+            self.graph.render("static/flowchart", format="png", cleanup=True)
+            return True
         except SyntaxError as e:
             return False

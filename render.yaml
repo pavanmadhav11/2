@@ -1,3 +1,7 @@
-env: python
-buildCommand: pip install -r requirements.txt
-startCommand: python app.py
+services:
+  - type: web
+    name: flowchart-app
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port 80"
+    plan: free
