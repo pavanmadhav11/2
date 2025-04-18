@@ -1,30 +1,25 @@
-from flask import Flask, render_template, request, jsonify, url_for
+from flask import Flask, render_template, request, jsonify
 from converter import generate_flowchart_png
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return render_template('index.html')  # Render the HTML template
+    return render_template('index.html')
 
 @app.route('/generate_flowchart', methods=['POST'])
 def generate_flowchart():
     try:
-        # Extract Python code from the request JSON body
-        data = request.get_json()
-        code = data['code']
+        code = request.form['code']
 
-        # Generate the flowchart PNG and save it in the static folder
+        # Generate the flowchart PNG and save it to the static folder
         flowchart_file = generate_flowchart_png(code)
 
-        # Generate the URL for the flowchart image in the static folder
-        flowchart_url = url_for('static', filename=flowchart_file)
-
-        # Return the flowchart URL as response
-        return jsonify({"flowchart_url": flowchart_url})
+        # Return the filename of the generated flowchart
+        return render_template('index.html', flowchart=flowchart_file)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return render_template('index.html', error=str(e))
 
 if __name__ == '__main__':
     app.run(debug=True)
