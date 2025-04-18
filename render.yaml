@@ -1,5 +1,3 @@
-services:
-  - type: web
-    name: flowchart-app
-    env: docker
-    plan: free
+env: python
+buildCommand: pip install -r requirements.txt
+startCommand: python app.py
