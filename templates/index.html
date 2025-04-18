@@ -5,7 +5,8 @@
     <style>
         body { font-family: Arial; margin: 40px; }
         textarea { width: 100%; height: 200px; }
-        img { margin-top: 20px; border: 1px solid #ccc; }
+        iframe { margin-top: 20px; width: 100%; height: 500px; border: 1px solid #ccc; }
+        button { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -17,7 +18,8 @@
 
     {% if flowchart %}
         <h2>Flowchart:</h2>
-        <img src="/static/flowchart.png" alt="Flowchart">
+        <!-- Embed the generated HTML flowchart -->
+        <iframe src="/static/{{ flowchart }}" frameborder="0"></iframe>
     {% endif %}
 
     {% if error %}
