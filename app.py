@@ -1,37 +1,30 @@
-from flask import Flask, render_template, request
-from converter import CodeToFlowchart
-import os
-import traceback
+from flask import Flask, render_template, request, jsonify, url_for
+from converter import generate_flowchart_png
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    chart_url = None
-    error = None
+@app.route('/')
+def home():
+    return render_template('index.html')  # Render the HTML template
 
-    if request.method == "POST":
-        try:
-            code = request.form.get("code", "")
-            if not code.strip():
-                error = "Please enter some code!"
-                return render_template("index.html", chart_url=None, error=error)
+@app.route('/generate_flowchart', methods=['POST'])
+def generate_flowchart():
+    try:
+        # Extract Python code from the request JSON body
+        data = request.get_json()
+        code = data['code']
 
-            # Initialize the flowchart generator
-            fc = CodeToFlowchart()
-            flowchart_image_path = fc.generate_flowchart(code)
+        # Generate the flowchart PNG and save it in the static folder
+        flowchart_file = generate_flowchart_png(code)
 
-            if flowchart_image_path:
-                chart_url = f"/static/{flowchart_image_path}"
-            else:
-                error = "Syntax Error in your code. Please fix it."
+        # Generate the URL for the flowchart image in the static folder
+        flowchart_url = url_for('static', filename=flowchart_file)
 
-        except Exception as e:
-            traceback.print_exc()  # Print full traceback to logs
-            error = f"Something went wrong: {str(e)}"
+        # Return the flowchart URL as response
+        return jsonify({"flowchart_url": flowchart_url})
 
-    return render_template("index.html", chart_url=chart_url, error=error)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Required for Render
-    app.run(debug=False, host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(debug=True)
