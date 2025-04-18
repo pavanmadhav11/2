@@ -1,28 +1,38 @@
 from flask import Flask, render_template, request
-from converter import generate_flowchart_bokeh
+from converter import CodeToFlowchart
 import os
+import traceback
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+@app.route("/", methods=["GET", "POST"])
+def index():
+    chart_url = None
+    error = None
 
-@app.route('/generate_flowchart', methods=['POST'])
-def generate_flowchart():
-    try:
-        code = request.form['code']
+    if request.method == "POST":
+        try:
+            code = request.form.get("code", "")
+            if not code.strip():
+                error = "Please enter some code!"
+                return render_template("index.html", chart_url=None, error=error)
 
-        # Generate the flowchart and save it to static
-        flowchart_file = generate_flowchart_bokeh(code)
+            # Initialize the flowchart generator
+            fc = CodeToFlowchart()
+            flowchart_image_path = fc.generate_flowchart(code)
 
-        # Return the filename of the generated flowchart
-        return render_template('index.html', flowchart=flowchart_file)
+            if flowchart_image_path:
+                chart_url = f"/static/{flowchart_image_path}"
+            else:
+                error = "Syntax Error in your code. Please fix it."
 
-    except Exception as e:
-        return render_template('index.html', error=str(e))
+        except Exception as e:
+            traceback.print_exc()  # Print full traceback to logs
+            error = f"Something went wrong: {str(e)}"
 
-if __name__ == '__main__':
-    # Bind to the port provided by Render (default is 5000)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    return render_template("index.html", chart_url=chart_url, error=error)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # Required for Render
+    app.run(debug=False, host="0.0.0.0", port=port)
