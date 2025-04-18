@@ -1,71 +1,70 @@
 import ast
-import graphviz
+import networkx as nx
+from bokeh.io import export_png
+from bokeh.plotting import figure, from_networkx
+from bokeh.models import HoverTool
+import os
 
-class CodeToFlowchart(ast.NodeVisitor):
-    def __init__(self):
-        self.graph = graphviz.Digraph(format="png")
-        self.node_count = 0
-        self.prev_node = None
-        self.error_detected = False
+# Make sure the static folder exists
+STATIC_FOLDER = os.path.join(os.getcwd(), 'static')
 
-    def add_node(self, label):
-        node_name = f"node{self.node_count}"
-        self.graph.node(node_name, label, shape="box")
-        if self.prev_node is not None:
-            self.graph.edge(self.prev_node, node_name)
-        self.prev_node = node_name
-        self.node_count += 1
-        return node_name
+if not os.path.exists(STATIC_FOLDER):
+    os.makedirs(STATIC_FOLDER)
 
-    def visit_FunctionDef(self, node):
-        self.prev_node = self.add_node(f"Function: {node.name}")
-        self.generic_visit(node)
+def build_ast_graph(code):
+    """Builds a networkx graph from the Python code's AST"""
+    tree = ast.parse(code)
+    graph = nx.DiGraph()
+    counter = {"id": 0}
 
-    def visit_Assign(self, node):
-        targets = ", ".join([target.id for target in node.targets if isinstance(target, ast.Name)])
-        value = ast.unparse(node.value) if hasattr(ast, "unparse") else ""
-        self.add_node(f"{targets} = {value}")
+    def get_id():
+        counter["id"] += 1
+        return f"node{counter['id']}"
 
-    def visit_If(self, node):
-        cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
-        if_node = self.add_node(f"IF {cond}?")
-        prev = self.prev_node
-        self.prev_node = if_node
-        for stmt in node.body:
-            self.visit(stmt)
-        true_end = self.prev_node
-        self.prev_node = if_node
-        for stmt in node.orelse:
-            self.visit(stmt)
-        false_end = self.prev_node
-        self.graph.edge(if_node, true_end, label="True")
-        self.graph.edge(if_node, false_end, label="False")
-        self.prev_node = false_end
+    def visit(node, parent_id=None):
+        node_id = get_id()
+        label = type(node).__name__
+        graph.add_node(node_id, label=label)
 
-    def visit_While(self, node):
-        cond = ast.unparse(node.test) if hasattr(ast, "unparse") else ""
-        loop_node = self.add_node(f"WHILE {cond}?")
-        prev = self.prev_node
-        self.prev_node = loop_node
-        for stmt in node.body:
-            self.visit(stmt)
-        self.graph.edge(self.prev_node, loop_node, label="Loop Back")
-        self.prev_node = loop_node
+        if parent_id:
+            graph.add_edge(parent_id, node_id)
 
-    def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            func_name = ast.unparse(node.value.func) if hasattr(ast, "unparse") else ""
-            self.add_node(f"Call: {func_name}()")
+        for child in ast.iter_child_nodes(node):
+            visit(child, node_id)
 
-    def visit_Return(self, node):
-        value = ast.unparse(node.value) if hasattr(ast, "unparse") else ""
-        self.add_node(f"Return {value}")
+    visit(tree)
+    return graph
 
-    def generate_flowchart(self, code):
-        try:
-            tree = ast.parse(code)
-            self.visit(tree)
-            self.graph.render("static/flowchart", format="png", cleanup=True)
-            return True
-        except SyntaxError as e:
-            return False
+def render_bokeh_graph(graph, filename):
+    """Generates a Bokeh plot from the networkx graph and saves it as a PNG"""
+    plot = figure(title="Python Flowchart", x_range=(-1.5, 1.5), y_range=(-1.5, 1.5),
+                  tools="pan,wheel_zoom,save,reset", active_scroll='wheel_zoom')
+
+    plot.axis.visible = False
+    plot.grid.visible = False
+
+    layout = nx.spring_layout(graph, seed=42)
+    bokeh_graph = from_networkx(graph, layout)
+
+    # Add hover tool
+    hover = HoverTool(tooltips=[("Node", "@label")])
+    plot.add_tools(hover)
+
+    bokeh_graph.node_renderer.data_source.data['label'] = [graph.nodes[n]['label'] for n in graph.nodes]
+    bokeh_graph.node_renderer.glyph.size = 20
+    bokeh_graph.node_renderer.glyph.fill_color = "skyblue"
+
+    plot.renderers.append(bokeh_graph)
+
+    # Save the plot as a PNG file in the static folder
+    output_png_path = os.path.join(STATIC_FOLDER, filename)
+    export_png(plot, filename=output_png_path)
+
+    return filename  # Return the relative path for the image file
+
+def generate_flowchart_png(code):
+    """Converts Python code to a flowchart and saves it as a PNG in the static folder"""
+    graph = build_ast_graph(code)
+    flowchart_filename = "flowchart.png"
+    flowchart_file = render_bokeh_graph(graph, flowchart_filename)
+    return flowchart_file
