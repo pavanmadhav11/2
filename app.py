@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, jsonify
-from converter import generate_flowchart_png
+from flask import Flask, render_template, request
+from converter import generate_flowchart_bokeh
 
 app = Flask(__name__)
 
@@ -12,8 +12,8 @@ def generate_flowchart():
     try:
         code = request.form['code']
 
-        # Generate the flowchart PNG and save it to the static folder
-        flowchart_file = generate_flowchart_png(code)
+        # Generate the flowchart and save it to static
+        flowchart_file = generate_flowchart_bokeh(code)
 
         # Return the filename of the generated flowchart
         return render_template('index.html', flowchart=flowchart_file)
